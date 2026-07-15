@@ -53,6 +53,7 @@ for (const [from, to] of moves) {
   moveAside(from, to);
 }
 
+try {
   execSync("node scripts/generate-sw.mjs", {
     stdio: "inherit",
     env: {
