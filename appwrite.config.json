@@ -1,0 +1,158 @@
+{
+  "projectId": "stapkedennis",
+  "endpoint": "https://fra.cloud.appwrite.io/v1",
+  "tablesDB": [
+    {
+      "$id": "6a549c670004508e76a9",
+      "name": "stapke",
+      "enabled": true
+    }
+  ],
+  "tables": [
+    {
+      "$id": "quizzes",
+      "databaseId": "6a549c670004508e76a9",
+      "name": "Quizzes",
+      "enabled": true,
+      "rowSecurity": false,
+      "$permissions": [
+        "create(\"users\")",
+        "read(\"users\")",
+        "update(\"users\")",
+        "delete(\"users\")"
+      ],
+      "columns": [
+        {
+          "key": "title",
+          "type": "varchar",
+          "required": true,
+          "size": 255
+        },
+        {
+          "key": "code",
+          "type": "varchar",
+          "required": true,
+          "size": 8
+        },
+        {
+          "key": "creatorId",
+          "type": "varchar",
+          "required": true,
+          "size": 36
+        },
+        {
+          "key": "status",
+          "type": "varchar",
+          "required": true,
+          "size": 20
+        },
+        {
+          "key": "description",
+          "type": "text",
+          "required": false
+        },
+        {
+          "key": "activeQuestionId",
+          "type": "varchar",
+          "required": false,
+          "size": 36
+        },
+        {
+          "key": "activeQuestionStartedAt",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "indexes": [
+        {
+          "key": "code_unique",
+          "type": "unique",
+          "attributes": ["code"]
+        }
+      ]
+    },
+    {
+      "$id": "questions",
+      "databaseId": "6a549c670004508e76a9",
+      "name": "Questions",
+      "enabled": true,
+      "rowSecurity": false,
+      "$permissions": [
+        "create(\"users\")",
+        "read(\"users\")",
+        "update(\"users\")",
+        "delete(\"users\")"
+      ],
+      "columns": [
+        {
+          "key": "quizId",
+          "type": "varchar",
+          "required": true,
+          "size": 36
+        },
+        {
+          "key": "text",
+          "type": "text",
+          "required": true
+        },
+        {
+          "key": "order",
+          "type": "integer",
+          "required": true
+        },
+        {
+          "key": "options",
+          "type": "longtext",
+          "required": true
+        }
+      ],
+      "indexes": [
+        {
+          "key": "quizId_index",
+          "type": "key",
+          "attributes": ["quizId"]
+        }
+      ]
+    },
+    {
+      "$id": "participants",
+      "databaseId": "6a549c670004508e76a9",
+      "name": "Participants",
+      "enabled": true,
+      "rowSecurity": false,
+      "$permissions": [],
+      "columns": [
+        {
+          "key": "quizId",
+          "type": "varchar",
+          "required": true,
+          "size": 36
+        },
+        {
+          "key": "displayName",
+          "type": "varchar",
+          "required": true,
+          "size": 100
+        },
+        {
+          "key": "sessionToken",
+          "type": "varchar",
+          "required": true,
+          "size": 64
+        }
+      ],
+      "indexes": [
+        {
+          "key": "quizId_index",
+          "type": "key",
+          "attributes": ["quizId"]
+        },
+        {
+          "key": "sessionToken_index",
+          "type": "key",
+          "attributes": ["sessionToken"]
+        }
+      ]
+    }
+  ]
+}

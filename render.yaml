@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: stapke
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_APPWRITE_ENDPOINT
+        sync: false
+      - key: NEXT_PUBLIC_APPWRITE_PROJECT_ID
+        sync: false
+      - key: NEXT_PUBLIC_APPWRITE_DATABASE_ID
+        sync: false
+      - key: NEXT_PUBLIC_APPWRITE_QUIZZES_TABLE_ID
+        sync: false
+      - key: NEXT_PUBLIC_APPWRITE_QUESTIONS_TABLE_ID
+        sync: false
+      - key: NEXT_PUBLIC_APPWRITE_CHAPTERS_TABLE_ID
+        sync: false
+      - key: NEXT_PUBLIC_APPWRITE_PARTICIPANTS_TABLE_ID
+        sync: false
+      - key: NEXT_PUBLIC_APPWRITE_ANSWERS_TABLE_ID
+        sync: false
+      - key: NEXT_PUBLIC_APPWRITE_GROUPS_TABLE_ID
+        sync: false
+      - key: NEXT_PUBLIC_APPWRITE_BUZZES_TABLE_ID
+        sync: false
+      - key: NEXT_PUBLIC_APPWRITE_BLACKJACK_SESSIONS_TABLE_ID
+        sync: false
+      - key: NEXT_PUBLIC_APPWRITE_BLACKJACK_SEATS_TABLE_ID
+        sync: false
+      - key: NEXT_PUBLIC_APPWRITE_BLACKJACK_HANDS_TABLE_ID
+        sync: false
+      - key: NEXT_PUBLIC_APPWRITE_IMAGES_BUCKET_ID
+        sync: false
+      - key: APPWRITE_API_KEY
+        sync: false
