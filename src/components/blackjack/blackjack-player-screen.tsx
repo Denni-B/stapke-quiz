@@ -29,6 +29,14 @@ async function postJson<T>(url: string, body: Record<string, unknown>): Promise<
   return data;
 }
 
+function PhaseBanner({ message }: { message: string }) {
+  return (
+    <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-center text-sm font-medium text-primary">
+      {message}
+    </div>
+  );
+}
+
 export function BlackjackPlayerScreen({
   sessionToken,
   blackjack,
@@ -37,6 +45,10 @@ export function BlackjackPlayerScreen({
   const [betInput, setBetInput] = useState(String(blackjack.myHands[0]?.bet || 10));
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const showHands = blackjack.myHands.length > 0 &&
+    ["playing", "dealer", "results", "insurance"].includes(blackjack.phase);
+  const showStickyActions = blackjack.phase === "playing" && blackjack.isMyTurn;
 
   useEffect(() => {
     const currentBet = blackjack.myHands[0]?.bet;
@@ -129,8 +141,12 @@ export function BlackjackPlayerScreen({
   );
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col gap-4 p-4">
-      <Card>
+    <div
+      className={`mx-auto flex min-h-dvh w-full max-w-lg flex-col gap-3 px-3 py-4 sm:gap-4 sm:px-4 ${
+        showStickyActions ? "pb-36" : "pb-4"
+      }`}
+    >
+      <Card className="shrink-0">
         <p className="text-xs font-medium uppercase tracking-wide text-muted">
           Blackjack · Ronde {blackjack.roundNumber}
         </p>
@@ -157,7 +173,7 @@ export function BlackjackPlayerScreen({
               <p className="mt-1 text-sm text-muted">
                 Er zijn {blackjack.seatCount} stoelen. Kies een vrije positie.
               </p>
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <div className="mt-4 grid grid-cols-2 gap-3">
                 {Array.from({ length: blackjack.seatCount }, (_, index) => {
                   const seatNumber = index + 1;
                   const occupied = blackjack.occupiedSeats.find(
@@ -174,7 +190,7 @@ export function BlackjackPlayerScreen({
                         loading || (occupiedSeatNumbers.has(seatNumber) && !isMine)
                       }
                       onClick={() => chooseSeat(seatNumber)}
-                      className="flex h-20 flex-col"
+                      className="flex min-h-16 flex-col"
                     >
                       <span className="text-lg font-bold">Stoel {seatNumber}</span>
                       <span className="text-xs opacity-80">
@@ -210,9 +226,10 @@ export function BlackjackPlayerScreen({
                 max={blackjack.availableBalance}
                 value={betInput}
                 onChange={(event) => setBetInput(event.target.value)}
+                className="w-full"
               />
-              <div className="flex gap-2">
-                <Button type="button" disabled={loading} onClick={submitBet}>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button type="button" disabled={loading} onClick={submitBet} className="w-full sm:flex-1">
                   Inzet instellen
                 </Button>
                 <Button
@@ -220,6 +237,7 @@ export function BlackjackPlayerScreen({
                   variant="secondary"
                   disabled={loading || !blackjack.myHands[0]?.bet}
                   onClick={confirmBet}
+                  className="w-full sm:flex-1"
                 >
                   Bevestig inzet
                 </Button>
@@ -230,9 +248,7 @@ export function BlackjackPlayerScreen({
       ) : null}
 
       {blackjack.phase === "insurance" && !blackjack.needsInsurance ? (
-        <Card>
-          <p className="text-sm text-muted">Wacht tot iedereen insurance heeft gekozen...</p>
-        </Card>
+        <PhaseBanner message="Wacht tot iedereen insurance heeft gekozen..." />
       ) : null}
 
       {blackjack.phase === "insurance" && blackjack.needsInsurance ? (
@@ -241,8 +257,13 @@ export function BlackjackPlayerScreen({
           <p className="mt-1 text-sm text-muted">
             De dealer toont een Aas. Wil je insurance nemen (max helft van je inzet)?
           </p>
-          <div className="mt-4 flex gap-2">
-            <Button type="button" disabled={loading} onClick={() => takeInsurance(true)}>
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+            <Button
+              type="button"
+              disabled={loading}
+              onClick={() => takeInsurance(true)}
+              className="w-full sm:flex-1"
+            >
               Ja
             </Button>
             <Button
@@ -250,6 +271,7 @@ export function BlackjackPlayerScreen({
               variant="secondary"
               disabled={loading}
               onClick={() => takeInsurance(false)}
+              className="w-full sm:flex-1"
             >
               Nee
             </Button>
@@ -257,37 +279,16 @@ export function BlackjackPlayerScreen({
         </Card>
       ) : null}
 
-      {["playing", "dealer", "results", "insurance"].includes(blackjack.phase) ? (
-        <Card>
-          <h2 className="text-lg font-semibold">Dealer</h2>
-          <div className="mt-4 flex gap-3">
-            {blackjack.dealerCards && blackjack.dealerCards.length > 0 ? (
-              blackjack.dealerCards.map((card, index) => (
-                <PlayingCard key={`dealer-${index}`} card={card} />
-              ))
-            ) : blackjack.dealerUpCard ? (
-              <PlayingCard card={blackjack.dealerUpCard} />
-            ) : (
-              <p className="text-sm text-muted">Nog geen kaarten</p>
-            )}
-          </div>
-          {blackjack.dealerValue ? (
-            <p className="mt-2 text-sm text-muted">Dealer: {blackjack.dealerValue}</p>
-          ) : null}
-        </Card>
-      ) : null}
-
-      {blackjack.myHands.length > 0 &&
-      ["playing", "dealer", "results", "insurance"].includes(blackjack.phase) ? (
-        <div className="space-y-4">
+      {showHands ? (
+        <div className="space-y-3">
           {blackjack.myHands.map((hand) => (
             <Card key={hand.handIndex}>
               <h2 className="text-lg font-semibold">
                 Jouw hand{blackjack.myHands.length > 1 ? ` ${hand.handIndex + 1}` : ""}
               </h2>
-              <div className="mt-4 flex gap-3">
+              <div className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1">
                 {hand.cards.map((card, index) => (
-                  <PlayingCard key={`${hand.handIndex}-${index}`} card={card} />
+                  <PlayingCard key={`${hand.handIndex}-${index}`} card={card} size="md" />
                 ))}
               </div>
               <p className="mt-2 text-sm text-muted">
@@ -307,12 +308,31 @@ export function BlackjackPlayerScreen({
         </div>
       ) : null}
 
-      {blackjack.phase === "playing" && blackjack.isMyTurn ? (
-        <Card>
-          <h2 className="text-lg font-semibold">Jouw beurt</h2>
-          <div className="mt-4 flex flex-wrap gap-2">
+      {blackjack.phase === "playing" && !blackjack.isMyTurn ? (
+        <PhaseBanner
+          message={`Wacht op speler aan stoel ${blackjack.currentSeat ?? "?"}...`}
+        />
+      ) : null}
+
+      {blackjack.phase === "dealer" ? (
+        <PhaseBanner message="De dealer speelt..." />
+      ) : null}
+
+      {blackjack.phase === "results" ? (
+        <PhaseBanner message="Ronde afgerond. Wacht op de volgende ronde." />
+      ) : null}
+
+      {showStickyActions ? (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 px-3 py-3 backdrop-blur-sm sm:px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <p className="mb-2 text-center text-sm font-semibold">Jouw beurt</p>
+          <div className="mx-auto flex max-w-lg flex-col gap-2 sm:flex-row sm:flex-wrap">
             {blackjack.allowedActions.includes("hit") ? (
-              <Button type="button" disabled={loading} onClick={() => performAction("hit")}>
+              <Button
+                type="button"
+                disabled={loading}
+                onClick={() => performAction("hit")}
+                className="w-full sm:flex-1"
+              >
                 Hit
               </Button>
             ) : null}
@@ -322,6 +342,7 @@ export function BlackjackPlayerScreen({
                 variant="secondary"
                 disabled={loading}
                 onClick={() => performAction("stand")}
+                className="w-full sm:flex-1"
               >
                 Stand
               </Button>
@@ -332,6 +353,7 @@ export function BlackjackPlayerScreen({
                 variant="secondary"
                 disabled={loading}
                 onClick={() => performAction("double")}
+                className="w-full sm:flex-1"
               >
                 Double
               </Button>
@@ -342,32 +364,13 @@ export function BlackjackPlayerScreen({
                 variant="secondary"
                 disabled={loading}
                 onClick={() => performAction("split")}
+                className="w-full sm:flex-1"
               >
                 Split
               </Button>
             ) : null}
           </div>
-        </Card>
-      ) : null}
-
-      {blackjack.phase === "playing" && !blackjack.isMyTurn ? (
-        <Card>
-          <p className="text-sm text-muted">
-            Wacht op speler aan stoel {blackjack.currentSeat ?? "?"}...
-          </p>
-        </Card>
-      ) : null}
-
-      {blackjack.phase === "dealer" ? (
-        <Card>
-          <p className="text-sm text-muted">De dealer speelt...</p>
-        </Card>
-      ) : null}
-
-      {blackjack.phase === "results" ? (
-        <Card>
-          <p className="text-sm text-muted">Ronde afgerond. Wacht op de volgende ronde.</p>
-        </Card>
+        </div>
       ) : null}
     </div>
   );

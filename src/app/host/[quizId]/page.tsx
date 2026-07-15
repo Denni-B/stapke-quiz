@@ -988,6 +988,8 @@ export default function HostQuizPage() {
       {hostScreen === "present" && quiz && presentingChapter && presentedQuestion ? (
         <HostPresentationScreen
           quiz={quiz}
+          quizId={quizId}
+          userId={userId}
           chapter={presentingChapter}
           question={presentedQuestion}
           questionIndex={presentingQuestionIndex}

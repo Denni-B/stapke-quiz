@@ -600,3 +600,38 @@ export async function assertChapterOpenForQuestion(
     throw new Error("This chapter is not open for voting.");
   }
 }
+
+export async function getVoterCountForQuiz(quizId: string): Promise<number> {
+  const [participants, groups] = await Promise.all([
+    getParticipantsForQuiz(quizId),
+    getGroupsForQuiz(quizId),
+  ]);
+
+  if (groups.length === 0) {
+    return participants.length;
+  }
+
+  const soloVoters = participants.filter((participant) => !participant.groupId).length;
+  return soloVoters + groups.length;
+}
+
+export async function getQuestionResponseStatus(
+  quizId: string,
+  questionId: string,
+): Promise<{ responseCount: number; voterCount: number }> {
+  const { tablesDB } = createServerClient();
+
+  const [answersResponse, voterCount] = await Promise.all([
+    tablesDB.listRows<Answer>({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.answersTableId,
+      queries: [Query.equal("quizId", quizId), Query.equal("questionId", questionId)],
+    }),
+    getVoterCountForQuiz(quizId),
+  ]);
+
+  return {
+    responseCount: answersResponse.rows.length,
+    voterCount,
+  };
+}

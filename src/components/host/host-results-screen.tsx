@@ -1,8 +1,9 @@
 import { MultipleChoiceResults } from "@/components/multiple-choice-results";
 import { ScaleResults } from "@/components/scale-results";
 import { Button } from "@/components/ui";
-import { getKahootColor } from "@/lib/kahoot-colors";
-import { getImagePreviewUrl } from "@/lib/storage";
+import { HostMcOptionCard } from "@/components/host/host-mc-option-card";
+import { HostQuestionImage } from "@/components/host/host-question-image";
+import { HostScreenFooter, HostScreenShell } from "@/components/host/host-screen-shell";
 import type { Chapter, HostChapterResults, ParsedQuestion, Quiz } from "@/lib/types";
 
 interface HostResultsScreenProps {
@@ -37,110 +38,87 @@ export function HostResultsScreen({
   const hasImage = Boolean(question.imageFileId);
   const isLastItem = questionIndex >= questionCount - 1;
   const nextLabel =
-    isRankingChapter && isLastItem ? "Show all results" : "Next question";
+    isRankingChapter && isLastItem ? "Toon alle resultaten" : "Volgende vraag";
+
+  const footer = (
+    <HostScreenFooter>
+      <Button type="button" variant="secondary" onClick={onBackToQuestion}>
+        Terug naar vraag
+      </Button>
+      <Button type="button" disabled={!hasNext || saving} onClick={onNext}>
+        {nextLabel}
+      </Button>
+    </HostScreenFooter>
+  );
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-slate-950 text-white">
-      <div className="flex items-center justify-between gap-4 border-b border-white/10 px-6 py-4">
-        <div className="min-w-0">
-          <p className="text-sm text-white/60">
-            {quiz.title} · {chapter.title} · Results · Question {questionIndex + 1} of{" "}
-            {questionCount}
-          </p>
-          {question.text ? (
-            <h1 className="mt-1 truncate text-lg font-semibold sm:text-xl">{question.text}</h1>
-          ) : null}
-        </div>
-        <Button type="button" variant="secondary" onClick={onExit}>
-          Exit
-        </Button>
-      </div>
+    <HostScreenShell
+      breadcrumb={`${quiz.title} · ${chapter.title} · Resultaten`}
+      title={question.text || undefined}
+      currentIndex={questionIndex}
+      totalCount={questionCount}
+      itemLabel="Vraag"
+      onExit={onExit}
+      footer={footer}
+    >
+      <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+        <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[3fr_2fr]">
+          <div className="space-y-4">
+            {hasImage ? (
+              <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
+                <HostQuestionImage
+                  fileId={question.imageFileId!}
+                  alt={question.text || "Vraag"}
+                  width={1280}
+                  height={720}
+                  fill={false}
+                  className="min-h-[200px] lg:min-h-[280px]"
+                />
+              </div>
+            ) : null}
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-6xl px-6 py-6">
-          <div className="grid gap-6 lg:grid-cols-2">
-            <div className="space-y-4">
-              {hasImage ? (
-                <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/20">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={getImagePreviewUrl(question.imageFileId!, 1280, 720)}
-                    alt={question.text || "Question"}
-                    className="aspect-video w-full object-contain"
+            {question.type === "multipleChoice" ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {question.options.map((option, optionIndex) => (
+                  <HostMcOptionCard
+                    key={optionIndex}
+                    option={option}
+                    optionIndex={optionIndex}
+                    imageSize="sm"
+                    textSize="sm"
+                    highlightCorrect
                   />
-                </div>
-              ) : null}
-
-              {question.type === "multipleChoice" ? (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {question.options.map((option, optionIndex) => {
-                    const color = getKahootColor(optionIndex);
-
-                    return (
-                      <div
-                        key={optionIndex}
-                        className={`overflow-hidden rounded-xl ${color.bg} ${
-                          option.isCorrect ? "ring-4 ring-emerald-400" : ""
-                        }`}
-                      >
-                        {option.imageFileId ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={getImagePreviewUrl(option.imageFileId, 480, 320)}
-                            alt={option.text || `Option ${optionIndex + 1}`}
-                            className="aspect-video w-full object-cover"
-                          />
-                        ) : null}
-                        <p className="p-3 text-sm font-semibold sm:text-base">
-                          {option.text || `Option ${optionIndex + 1}`}
-                          {option.isCorrect ? (
-                            <span className="ml-2 text-xs font-medium text-emerald-200">
-                              Correct
-                            </span>
-                          ) : null}
-                        </p>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="text-lg text-white/70">
-                  Players rated from {question.scaleMin ?? 1} to {question.scaleMax ?? 10}
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+                <p className="text-lg text-white/70 sm:text-xl">
+                  Spelers beoordelen van {question.scaleMin ?? 1} tot{" "}
+                  {question.scaleMax ?? 10}
                 </p>
-              )}
-            </div>
+              </div>
+            )}
+          </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white p-4 text-foreground">
-              {question.type === "scale1to10" ? (
-                <ScaleResults
-                  results={results.scaleResults.filter(
-                    (result) => result.questionId === question.$id,
-                  )}
-                  participantCount={results.participantCount}
-                />
-              ) : (
-                <MultipleChoiceResults
-                  results={results.multipleChoiceResults}
-                  participantCount={results.participantCount}
-                  highlightQuestionId={question.$id}
-                  showOptionImages
-                />
-              )}
-            </div>
+          <div className="rounded-2xl border border-white/10 bg-white p-4 text-foreground shadow-xl">
+            {question.type === "scale1to10" ? (
+              <ScaleResults
+                results={results.scaleResults.filter(
+                  (result) => result.questionId === question.$id,
+                )}
+                participantCount={results.participantCount}
+              />
+            ) : (
+              <MultipleChoiceResults
+                results={results.multipleChoiceResults}
+                participantCount={results.participantCount}
+                highlightQuestionId={question.$id}
+                showOptionImages
+              />
+            )}
           </div>
         </div>
       </div>
-
-      <div className="border-t border-white/10 bg-slate-900/80 px-6 py-4 backdrop-blur">
-        <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-center gap-3">
-          <Button type="button" variant="secondary" onClick={onBackToQuestion}>
-            Back to question
-          </Button>
-          <Button type="button" disabled={!hasNext || saving} onClick={onNext}>
-            {nextLabel}
-          </Button>
-        </div>
-      </div>
-    </div>
+    </HostScreenShell>
   );
 }

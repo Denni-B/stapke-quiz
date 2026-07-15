@@ -1,10 +1,18 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
 import { Button } from "@/components/ui";
-import { getKahootColor } from "@/lib/kahoot-colors";
-import { getImagePreviewUrl } from "@/lib/storage";
+import { HostMcOptionCard } from "@/components/host/host-mc-option-card";
+import { HostQuestionImage } from "@/components/host/host-question-image";
+import { HostScreenFooter, HostScreenShell } from "@/components/host/host-screen-shell";
+import { apiUrl } from "@/lib/api-url";
 import type { Chapter, ParsedQuestion, Quiz } from "@/lib/types";
 
 interface HostPresentationScreenProps {
   quiz: Quiz;
+  quizId: string;
+  userId: string;
   chapter: Chapter;
   question: ParsedQuestion;
   questionIndex: number;
@@ -18,8 +26,96 @@ interface HostPresentationScreenProps {
   onExit: () => void;
 }
 
+function ScaleVisualization({ min, max }: { min: number; max: number }) {
+  const values = Array.from({ length: max - min + 1 }, (_, index) => min + index);
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col items-center justify-center p-4 sm:p-6">
+      <p className="mb-6 text-center text-xl text-white/70 sm:text-2xl lg:text-3xl">
+        Spelers beoordelen van {min} tot {max}
+      </p>
+      <div className="flex w-full max-w-2xl flex-wrap items-center justify-center gap-2 sm:gap-3">
+        {values.map((value) => (
+          <div
+            key={value}
+            className="flex h-12 w-12 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-lg font-bold shadow-lg sm:h-14 sm:w-14 sm:text-xl"
+          >
+            {value}
+          </div>
+        ))}
+      </div>
+      <div className="mt-6 h-2 w-full max-w-2xl overflow-hidden rounded-full bg-white/10">
+        <div className="h-full w-full bg-gradient-to-r from-red-500/60 via-yellow-400/60 to-emerald-500/60" />
+      </div>
+      <div className="mt-2 flex w-full max-w-2xl justify-between text-xs text-white/40">
+        <span>Laag ({min})</span>
+        <span>Hoog ({max})</span>
+      </div>
+    </div>
+  );
+}
+
+function MultipleChoiceOptions({
+  question,
+}: {
+  question: ParsedQuestion;
+}) {
+  return (
+    <div className="grid shrink-0 grid-cols-2 gap-2 sm:gap-3 lg:gap-4">
+      {question.options.map((option, optionIndex) => (
+        <HostMcOptionCard
+          key={optionIndex}
+          option={option}
+          optionIndex={optionIndex}
+          imageSize="sm"
+          textSize="md"
+        />
+      ))}
+    </div>
+  );
+}
+
+function MultipleChoiceLayout({
+  question,
+  hasImage,
+}: {
+  question: ParsedQuestion;
+  hasImage: boolean;
+}) {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-3 sm:p-4 lg:p-6">
+      {question.text ? (
+        <div className="shrink-0 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+          <p className="text-center text-xl font-semibold leading-snug sm:text-2xl md:text-3xl lg:text-4xl">
+            {question.text}
+          </p>
+        </div>
+      ) : null}
+
+      {hasImage ? (
+        <div className="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] sm:mt-4">
+          <HostQuestionImage
+            fileId={question.imageFileId!}
+            alt={question.text || "Vraag"}
+          />
+        </div>
+      ) : (
+        <div className="min-h-0 flex-1" />
+      )}
+
+      <div className="mt-auto shrink-0 border-t border-white/10 pt-3 sm:pt-4">
+        <div className="mx-auto w-full max-w-5xl">
+          <MultipleChoiceOptions question={question} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function HostPresentationScreen({
   quiz,
+  quizId,
+  userId,
   chapter,
   question,
   questionIndex,
@@ -32,117 +128,134 @@ export function HostPresentationScreen({
   onShowScore,
   onExit,
 }: HostPresentationScreenProps) {
+  const [responseStatus, setResponseStatus] = useState<{
+    responseCount: number;
+    voterCount: number;
+  } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchResponseStatus() {
+      try {
+        const response = await fetch(
+          apiUrl(
+            `/api/host/${quizId}/response-status?userId=${encodeURIComponent(userId)}&questionId=${encodeURIComponent(question.$id)}`,
+          ),
+          { cache: "no-store" },
+        );
+
+        const data = (await response.json()) as {
+          responseCount?: number;
+          voterCount?: number;
+          error?: string;
+        };
+
+        if (!cancelled && response.ok) {
+          setResponseStatus({
+            responseCount: data.responseCount ?? 0,
+            voterCount: data.voterCount ?? 0,
+          });
+        }
+      } catch {
+        // Keep last known status while polling.
+      }
+    }
+
+    fetchResponseStatus();
+    const interval = window.setInterval(fetchResponseStatus, 1500);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [question.$id, quizId, userId]);
+
   const hasImage = Boolean(question.imageFileId);
-  const itemLabel = isRankingChapter ? "Item" : "Question";
+  const itemLabel = isRankingChapter ? "Item" : "Vraag";
   const isLastItem = questionIndex >= questionCount - 1;
   const nextDisabled = saving || (isLastItem && !isRankingChapter);
+  const isMultipleChoice = question.type === "multipleChoice";
+  const scaleMin = question.scaleMin ?? 1;
+  const scaleMax = question.scaleMax ?? 10;
+
+  const footer = (
+    <HostScreenFooter>
+      <Button
+        type="button"
+        variant="secondary"
+        disabled={questionIndex === 0 || saving}
+        onClick={onPrevious}
+      >
+        Vorige
+      </Button>
+      <Button type="button" variant="secondary" disabled={nextDisabled} onClick={onNext}>
+        {isRankingChapter && isLastItem ? "Toon resultaten" : "Volgende"}
+      </Button>
+      <Button type="button" variant="secondary" onClick={onShowResults}>
+        Toon resultaten
+      </Button>
+      {!isRankingChapter ? (
+        <Button type="button" variant="secondary" onClick={onShowScore}>
+          Toon score
+        </Button>
+      ) : null}
+    </HostScreenFooter>
+  );
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-slate-950 text-white">
-      <div className="flex items-center justify-between gap-4 border-b border-white/10 px-6 py-4">
-        <div className="min-w-0">
-          <p className="text-sm text-white/60">
-            {quiz.title} · {chapter.title} · {itemLabel} {questionIndex + 1} of {questionCount}
-          </p>
-          <p className="mt-1 text-xs font-medium uppercase tracking-wide text-emerald-400">
-            Live for players
-          </p>
-        </div>
-        <Button type="button" variant="secondary" onClick={onExit}>
-          Exit
-        </Button>
-      </div>
-
-      <div className="flex min-h-0 flex-1 flex-col px-6 py-8">
-        {question.text ? (
-          <h1
-            className={`shrink-0 text-center font-semibold leading-tight ${
-              hasImage ? "text-3xl sm:text-4xl md:text-5xl" : "text-4xl sm:text-5xl md:text-6xl"
-            }`}
-          >
-            {question.text}
-          </h1>
-        ) : null}
-
-        {hasImage ? (
-          <div className="mt-6 flex min-h-0 flex-1 items-center justify-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={getImagePreviewUrl(question.imageFileId!, 1920, 1080)}
-              alt={question.text || "Question"}
-              className="max-h-full max-w-full rounded-2xl object-contain shadow-2xl"
+    <HostScreenShell
+      breadcrumb={`${quiz.title} · ${chapter.title}`}
+      badge="Live voor spelers"
+      currentIndex={questionIndex}
+      totalCount={questionCount}
+      itemLabel={itemLabel}
+      responseStatus={responseStatus ?? undefined}
+      onExit={onExit}
+      footer={footer}
+    >
+      {isMultipleChoice ? (
+        <MultipleChoiceLayout question={question} hasImage={hasImage} />
+      ) : isRankingChapter && hasImage ? (
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-b border-white/10 p-3 sm:p-4 lg:border-b-0 lg:border-r">
+            {question.text ? (
+              <div className="shrink-0 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                <p className="text-center text-lg font-semibold leading-snug sm:text-2xl lg:text-3xl">
+                  {question.text}
+                </p>
+              </div>
+            ) : null}
+            <HostQuestionImage
+              fileId={question.imageFileId!}
+              alt={question.text || "Item"}
             />
           </div>
-        ) : question.type === "scale1to10" ? (
-          <div className="flex flex-1 items-center justify-center">
-            <p className="text-2xl text-white/70 sm:text-3xl">
-              Players rate from {question.scaleMin ?? 1} to {question.scaleMax ?? 10}
-            </p>
+          <div className="flex min-h-0 w-full shrink-0 flex-col lg:w-[42%] xl:w-[38%]">
+            <ScaleVisualization min={scaleMin} max={scaleMax} />
           </div>
-        ) : null}
-
-        {question.type === "multipleChoice" ? (
-          <div
-            className={`grid shrink-0 gap-3 sm:grid-cols-2 ${hasImage ? "mt-6" : "mt-8 flex-1 content-center"}`}
-          >
-            {question.options.map((option, optionIndex) => {
-              const color = getKahootColor(optionIndex);
-
-              return (
-                <div
-                  key={optionIndex}
-                  className={`overflow-hidden rounded-xl ${color.bg} text-white shadow-lg`}
-                >
-                  {option.imageFileId ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={getImagePreviewUrl(option.imageFileId, 480, 320)}
-                      alt={option.text || `Option ${optionIndex + 1}`}
-                      className="aspect-video w-full object-cover"
-                    />
-                  ) : null}
-                  {option.text ? (
-                    <p className="p-4 text-lg font-semibold sm:text-xl">{option.text}</p>
-                  ) : (
-                    <p className="p-4 text-lg font-semibold sm:text-xl">
-                      Option {optionIndex + 1}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        ) : null}
-      </div>
-
-      <div className="border-t border-white/10 bg-slate-900/80 px-6 py-4 backdrop-blur">
-        <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-center gap-3">
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={questionIndex === 0 || saving}
-            onClick={onPrevious}
-          >
-            Previous
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={nextDisabled}
-            onClick={onNext}
-          >
-            {isRankingChapter && isLastItem ? "Show results" : "Next"}
-          </Button>
-          <Button type="button" variant="secondary" onClick={onShowResults}>
-            Show results
-          </Button>
-          {!isRankingChapter ? (
-            <Button type="button" variant="secondary" onClick={onShowScore}>
-              Show score
-            </Button>
-          ) : null}
         </div>
-      </div>
-    </div>
+      ) : (
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-3 sm:p-4">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
+            {question.text ? (
+              <div className="shrink-0 border-b border-white/10 px-4 py-3">
+                <p className="text-center text-lg font-semibold leading-snug sm:text-2xl lg:text-3xl">
+                  {question.text}
+                </p>
+              </div>
+            ) : null}
+            {hasImage ? (
+              <HostQuestionImage
+                fileId={question.imageFileId!}
+                alt={question.text || "Item"}
+              />
+            ) : (
+              <ScaleVisualization min={scaleMin} max={scaleMax} />
+            )}
+          </div>
+        </div>
+      )}
+    </HostScreenShell>
   );
 }

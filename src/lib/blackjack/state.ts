@@ -1063,9 +1063,6 @@ export async function buildPlayerState(
     .reduce((sum, hand) => sum + hand.bet + hand.insuranceBet, 0);
   const availableBalance = Math.max(0, totalScore - committed);
 
-  const dealerCards = parseDealerCards(session);
-  const showAllDealer = session.phase === "dealer" || session.phase === "results";
-  const dealerUpCard = dealerCards[0];
   const isMyTurn =
     session.phase === "playing" &&
     mySeat !== undefined &&
@@ -1107,12 +1104,6 @@ export async function buildPlayerState(
         payout: hand.payout,
       };
     }),
-    dealerUpCard,
-    dealerCards: showAllDealer ? dealerCards : dealerUpCard ? [dealerUpCard] : undefined,
-    dealerValue:
-      showAllDealer && dealerCards.length > 0
-        ? handValue(dealerCards).value
-        : undefined,
     currentSeat: session.currentSeat || undefined,
     currentHandIndex: session.currentHandIndex,
     isMyTurn,

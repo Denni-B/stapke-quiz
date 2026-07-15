@@ -1,6 +1,6 @@
-import { Button } from "@/components/ui";
-import { getKahootColor } from "@/lib/kahoot-colors";
-import { getImagePreviewUrl } from "@/lib/storage";
+import { HostMcOptionCard } from "@/components/host/host-mc-option-card";
+import { HostQuestionImage } from "@/components/host/host-question-image";
+import { HostScreenShell } from "@/components/host/host-screen-shell";
 import type {
   LeaderboardEntry,
   LeaderboardMode,
@@ -18,20 +18,17 @@ interface HostLeaderboardScreenProps {
   onExit: () => void;
 }
 
-function getRankStyle(rank: number) {
+function getRankBadgeStyle(rank: number) {
   if (rank === 1) {
-    return "border-yellow-400/60 bg-yellow-400/10";
+    return "border-yellow-400/60 bg-yellow-400/15 text-yellow-300";
   }
-
   if (rank === 2) {
-    return "border-slate-300/60 bg-slate-300/10";
+    return "border-slate-300/50 bg-slate-300/10 text-slate-200";
   }
-
   if (rank === 3) {
-    return "border-amber-600/60 bg-amber-600/10";
+    return "border-amber-500/50 bg-amber-600/15 text-amber-300";
   }
-
-  return "border-white/10 bg-white/5";
+  return "border-white/10 bg-white/5 text-white/70";
 }
 
 export function HostLeaderboardScreen({
@@ -46,62 +43,48 @@ export function HostLeaderboardScreen({
   const teamNamesById = new Map(teams.map((team) => [team.groupId, team.memberNames.join(", ")]));
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-slate-950 text-white">
-      <div className="flex items-center justify-between gap-4 border-b border-white/10 px-6 py-4">
-        <div>
-          <p className="text-sm text-white/60">{quiz.title}</p>
-          <h1 className="mt-1 text-2xl font-semibold sm:text-3xl">
-            {mode === "mixed" ? "Teamscore" : "Score"}
-          </h1>
-        </div>
-        <Button type="button" variant="secondary" onClick={onExit}>
-          Exit
-        </Button>
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
-        <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-2">
+    <HostScreenShell
+      breadcrumb={quiz.title}
+      title={mode === "mixed" ? "Teamscore" : "Scorebord"}
+      badge={question ? "Huidige vraag" : undefined}
+      onExit={onExit}
+    >
+      <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+        <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[3fr_2fr]">
           {question ? (
             <div className="space-y-4">
-              {question.text ? (
-                <h2 className="text-xl font-semibold sm:text-2xl">{question.text}</h2>
-              ) : null}
+              <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
+                {question.text ? (
+                  <div className="border-b border-white/10 px-4 py-3">
+                    <h2 className="text-center text-lg font-semibold leading-snug sm:text-xl lg:text-2xl">
+                      {question.text}
+                    </h2>
+                  </div>
+                ) : null}
 
-              {hasImage ? (
-                <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/20">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={getImagePreviewUrl(question.imageFileId!, 1280, 720)}
-                    alt={question.text || "Question"}
-                    className="aspect-video w-full object-contain"
+                {hasImage ? (
+                  <HostQuestionImage
+                    fileId={question.imageFileId!}
+                    alt={question.text || "Vraag"}
+                    width={1280}
+                    height={720}
+                    fill={false}
+                    className="min-h-[160px] lg:min-h-[220px]"
                   />
-                </div>
-              ) : null}
+                ) : null}
+              </div>
 
               {question.type === "multipleChoice" ? (
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {question.options.map((option, optionIndex) => {
-                    const color = getKahootColor(optionIndex);
-
-                    return (
-                      <div
-                        key={optionIndex}
-                        className={`overflow-hidden rounded-xl ${color.bg}`}
-                      >
-                        {option.imageFileId ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={getImagePreviewUrl(option.imageFileId, 480, 320)}
-                            alt={option.text || `Option ${optionIndex + 1}`}
-                            className="aspect-video w-full object-cover"
-                          />
-                        ) : null}
-                        <p className="p-3 text-sm font-semibold">
-                          {option.text || `Option ${optionIndex + 1}`}
-                        </p>
-                      </div>
-                    );
-                  })}
+                  {question.options.map((option, optionIndex) => (
+                    <HostMcOptionCard
+                      key={optionIndex}
+                      option={option}
+                      optionIndex={optionIndex}
+                      imageSize="sm"
+                      textSize="sm"
+                    />
+                  ))}
                 </div>
               ) : null}
             </div>
@@ -110,7 +93,9 @@ export function HostLeaderboardScreen({
           <div className={question ? "" : "lg:col-span-2"}>
             <div className="mx-auto max-w-3xl space-y-3">
               {leaderboard.length === 0 ? (
-                <p className="text-center text-lg text-white/60">No players have scored yet.</p>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-12 text-center">
+                  <p className="text-lg text-white/60">Nog geen spelers met punten.</p>
+                </div>
               ) : (
                 leaderboard.map((entry) => {
                   const memberNames = teamNamesById.get(entry.participantId);
@@ -118,22 +103,22 @@ export function HostLeaderboardScreen({
                   return (
                     <div
                       key={entry.participantId}
-                      className={`flex items-center gap-4 rounded-2xl border px-5 py-4 ${getRankStyle(entry.rank)}`}
+                      className={`flex items-center gap-4 rounded-2xl border px-4 py-4 shadow-lg sm:px-5 ${getRankBadgeStyle(entry.rank)}`}
                     >
-                      <span className="w-10 shrink-0 text-center text-2xl font-bold text-white/80">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-current/30 text-xl font-bold tabular-nums">
                         {entry.rank}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <span className="block truncate text-xl font-semibold">
+                        <span className="block truncate text-lg font-semibold sm:text-xl">
                           {entry.displayName}
                         </span>
                         {memberNames ? (
-                          <span className="mt-0.5 block truncate text-sm text-white/60">
+                          <span className="mt-0.5 block truncate text-sm text-white/50">
                             {memberNames}
                           </span>
                         ) : null}
                       </div>
-                      <span className="shrink-0 text-2xl font-bold text-primary">
+                      <span className="shrink-0 text-xl font-bold tabular-nums text-emerald-400 sm:text-2xl">
                         {entry.totalScore.toLocaleString()}
                       </span>
                     </div>
@@ -144,6 +129,6 @@ export function HostLeaderboardScreen({
           </div>
         </div>
       </div>
-    </div>
+    </HostScreenShell>
   );
 }

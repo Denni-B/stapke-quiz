@@ -57,7 +57,7 @@ export function MultipleChoiceResults({
                         <img
                           src={getImagePreviewUrl(option.imageFileId, 96, 96)}
                           alt={option.text || `Option ${optionIndex + 1}`}
-                          className="h-12 w-12 shrink-0 rounded-lg object-cover"
+                          className="h-12 w-12 shrink-0 rounded-lg bg-slate-100 object-contain p-0.5"
                         />
                       ) : null}
                       <div className="min-w-0 flex-1">
