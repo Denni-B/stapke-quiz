@@ -1,4 +1,4 @@
-export const MC_MAX_POINTS = 2000;
+export const MC_MAX_POINTS = 3000;
 /** Full points while players receive the question (2s poll + Render/GitHub Pages latency). */
 export const MC_GRACE_PERIOD_MS = 1_000;
 /** Decay window after the grace period before points reach the minimum. */
