@@ -47,7 +47,7 @@ export function HostBlackjackScreen({
     void loadState();
     const interval = window.setInterval(() => {
       void loadState();
-    }, 500);
+    }, 1500);
 
     return () => window.clearInterval(interval);
   }, [loadState]);

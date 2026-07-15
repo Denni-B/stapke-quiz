@@ -2,10 +2,7 @@ import { Query } from "node-appwrite";
 import { NextResponse } from "next/server";
 
 import { getParticipantAnswerState, getParticipantBySessionToken } from "@/lib/answers";
-import {
-  buildPlayerState,
-  getOpenBlackjackChapterId,
-} from "@/lib/blackjack/state";
+import { buildPlayerState } from "@/lib/blackjack/state";
 import { getParticipantJeopardyState } from "@/lib/buzzes";
 import { appwriteConfig, isServerConfigured } from "@/lib/appwrite/config";
 import { createServerClient } from "@/lib/appwrite/server";
@@ -35,17 +32,18 @@ export async function GET(
   const { tablesDB } = createServerClient();
 
   try {
-    const quiz = await tablesDB.getRow<Quiz>({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.quizzesTableId,
-      rowId: quizId,
-    });
-
-    const chaptersResponse = await tablesDB.listRows<Chapter>({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.chaptersTableId,
-      queries: [Query.equal("quizId", quizId), Query.orderAsc("order")],
-    });
+    const [quiz, chaptersResponse] = await Promise.all([
+      tablesDB.getRow<Quiz>({
+        databaseId: appwriteConfig.databaseId,
+        tableId: appwriteConfig.quizzesTableId,
+        rowId: quizId,
+      }),
+      tablesDB.listRows<Chapter>({
+        databaseId: appwriteConfig.databaseId,
+        tableId: appwriteConfig.chaptersTableId,
+        queries: [Query.equal("quizId", quizId), Query.orderAsc("order")],
+      }),
+    ]);
 
     let activeQuestion: {
       id: string;
@@ -143,7 +141,9 @@ export async function GET(
       const participant = await getParticipantBySessionToken(sessionToken);
 
       if (participant && participant.quizId === quizId) {
-        const answerState = await getParticipantAnswerState(quizId, participant.$id);
+        const answerState = await getParticipantAnswerState(quizId, participant.$id, {
+          participant,
+        });
         myVotes = answerState.myVotes;
         myPoints = answerState.myPoints;
         totalScore = answerState.totalScore;
@@ -152,21 +152,32 @@ export async function GET(
         groupName = answerState.groupName ?? null;
         isInGroup = answerState.isInGroup;
 
-        if (activeQuestion?.type === "jeopardy") {
-          jeopardy = await getParticipantJeopardyState(activeQuestion.id, participant);
+        const blackjackChapterId = blackjackChapterOpen
+          ? chaptersResponse.rows.find(
+              (chapter) => chapter.isOpen === 1 && chapter.type === "blackjack",
+            )?.$id
+          : undefined;
+
+        const [jeopardyState, blackjackState] = await Promise.all([
+          activeQuestion?.type === "jeopardy"
+            ? getParticipantJeopardyState(activeQuestion.id, participant)
+            : Promise.resolve(undefined),
+          blackjackChapterId
+            ? buildPlayerState(quizId, blackjackChapterId, participant, {
+                totalScore: answerState.totalScore,
+              }).catch((blackjackError) => {
+                console.error("Failed to build blackjack player state:", blackjackError);
+                return null;
+              })
+            : Promise.resolve(null),
+        ]);
+
+        if (jeopardyState) {
+          jeopardy = jeopardyState;
         }
 
-        if (blackjackChapterOpen) {
-          const chapterId = await getOpenBlackjackChapterId(quizId);
-
-          if (chapterId) {
-            try {
-              blackjack =
-                (await buildPlayerState(quizId, chapterId, participant)) ?? undefined;
-            } catch (blackjackError) {
-              console.error("Failed to build blackjack player state:", blackjackError);
-            }
-          }
+        if (blackjackState) {
+          blackjack = blackjackState;
         }
       }
     }

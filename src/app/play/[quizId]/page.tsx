@@ -412,7 +412,35 @@ export default function PlayPage() {
 
     const sessionToken = session.sessionToken;
     let cancelled = false;
+    let timeoutId: number | undefined;
     let lastActiveQuestionId: string | null | undefined;
+
+    function getPollDelay(state: PlayQuizState | null): number {
+      if (!state || state.status !== "active") {
+        return 4000;
+      }
+
+      if (
+        state.activeQuestion ||
+        state.blackjackChapterOpen ||
+        state.jeopardyChapterOpen
+      ) {
+        return 2000;
+      }
+
+      return 4000;
+    }
+
+    function scheduleNext(state: PlayQuizState | null, delayOverride?: number) {
+      if (cancelled) {
+        return;
+      }
+
+      timeoutId = window.setTimeout(
+        poll,
+        delayOverride ?? getPollDelay(state),
+      );
+    }
 
     async function poll() {
       try {
@@ -426,24 +454,30 @@ export default function PlayPage() {
           setPlayState(nextState);
 
           if (questionChanged) {
-            window.setTimeout(() => {
-              if (!cancelled) {
-                void poll();
-              }
-            }, 150);
+            scheduleNext(nextState, 150);
+            return;
           }
+
+          scheduleNext(nextState);
+          return;
         }
       } catch {
         // Keep polling silently while waiting for the host.
       }
+
+      if (!cancelled) {
+        scheduleNext(null);
+      }
     }
 
     poll();
-    const interval = window.setInterval(poll, 800);
 
     return () => {
       cancelled = true;
-      window.clearInterval(interval);
+
+      if (timeoutId !== undefined) {
+        window.clearTimeout(timeoutId);
+      }
     };
   }, [params.quizId, session]);
 

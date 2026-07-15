@@ -68,6 +68,7 @@ export async function getVotesForParticipant(
 export async function getParticipantAnswerState(
   quizId: string,
   participantId: string,
+  options?: { participant?: Participant },
 ): Promise<{
   myVotes: Record<string, number>;
   myPoints: Record<string, number>;
@@ -79,81 +80,99 @@ export async function getParticipantAnswerState(
 }> {
   const { tablesDB } = createServerClient();
 
-  const participant = await tablesDB.getRow<Participant>({
-    databaseId: appwriteConfig.databaseId,
-    tableId: appwriteConfig.participantsTableId,
-    rowId: participantId,
-  });
+  const participant =
+    options?.participant ??
+    (await tablesDB.getRow<Participant>({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.participantsTableId,
+      rowId: participantId,
+    }));
 
-  const response = await tablesDB.listRows<Answer>({
-    databaseId: appwriteConfig.databaseId,
-    tableId: appwriteConfig.answersTableId,
-    queries: [Query.equal("quizId", quizId)],
-  });
-
-  const allAnswers = response.rows;
   const myVotes: Record<string, number> = {};
   const myPoints: Record<string, number> = {};
 
   if (participant.groupId) {
-    const groupMembers = await tablesDB.listRows<Participant>({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.participantsTableId,
-      queries: [Query.equal("groupId", participant.groupId)],
-    });
-    const memberIds = new Set(groupMembers.rows.map((member) => member.$id));
+    const groupId = participant.groupId;
 
-    for (const answer of allAnswers) {
-      if (answer.groupId === participant.groupId) {
-        myVotes[answer.questionId] = answer.value;
-        myPoints[answer.questionId] = answer.points ?? 0;
+    const [groupMembersResponse, groupAnswersResponse, groupResult] = await Promise.all([
+      tablesDB.listRows<Participant>({
+        databaseId: appwriteConfig.databaseId,
+        tableId: appwriteConfig.participantsTableId,
+        queries: [Query.equal("groupId", groupId)],
+      }),
+      tablesDB.listRows<Answer>({
+        databaseId: appwriteConfig.databaseId,
+        tableId: appwriteConfig.answersTableId,
+        queries: [
+          Query.equal("quizId", quizId),
+          Query.equal("groupId", groupId),
+        ],
+      }),
+      tablesDB
+        .getRow<Group>({
+          databaseId: appwriteConfig.databaseId,
+          tableId: appwriteConfig.groupsTableId,
+          rowId: groupId,
+        })
+        .catch(() => null),
+    ]);
+
+    const memberIds = groupMembersResponse.rows.map((member) => member.$id);
+    const memberAnswerResponses = await Promise.all(
+      memberIds.map((memberId) =>
+        tablesDB.listRows<Answer>({
+          databaseId: appwriteConfig.databaseId,
+          tableId: appwriteConfig.answersTableId,
+          queries: [
+            Query.equal("quizId", quizId),
+            Query.equal("participantId", memberId),
+          ],
+        }),
+      ),
+    );
+
+    const preGroupAnswers = memberAnswerResponses.flatMap((response) =>
+      response.rows.filter((answer) => !answer.groupId),
+    );
+    const scoringAnswers = [...groupAnswersResponse.rows, ...preGroupAnswers];
+
+    for (const answer of groupAnswersResponse.rows) {
+      myVotes[answer.questionId] = answer.value;
+      myPoints[answer.questionId] = answer.points ?? 0;
+    }
+
+    for (const answer of preGroupAnswers) {
+      if (answer.participantId !== participantId) {
         continue;
       }
 
-      if (!answer.groupId && answer.participantId === participantId) {
-        myVotes[answer.questionId] = answer.value;
-        myPoints[answer.questionId] = answer.points ?? 0;
-      }
-    }
-
-    const preGroupScore = computePreGroupScore(participantId, allAnswers);
-    const totalScore = computeTeamScore(
-      participant.groupId,
-      [...memberIds],
-      allAnswers,
-    );
-
-    let groupName: string | undefined;
-
-    try {
-      const group = await tablesDB.getRow<Group>({
-        databaseId: appwriteConfig.databaseId,
-        tableId: appwriteConfig.groupsTableId,
-        rowId: participant.groupId,
-      });
-      groupName = group.name;
-    } catch {
-      groupName = undefined;
+      myVotes[answer.questionId] = answer.value;
+      myPoints[answer.questionId] = answer.points ?? 0;
     }
 
     return {
       myVotes,
       myPoints,
-      totalScore,
-      preGroupScore,
-      groupId: participant.groupId,
-      groupName,
+      totalScore: computeTeamScore(groupId, memberIds, scoringAnswers),
+      preGroupScore: computePreGroupScore(participantId, scoringAnswers),
+      groupId,
+      groupName: groupResult?.name,
       isInGroup: true,
     };
   }
 
+  const response = await tablesDB.listRows<Answer>({
+    databaseId: appwriteConfig.databaseId,
+    tableId: appwriteConfig.answersTableId,
+    queries: [
+      Query.equal("quizId", quizId),
+      Query.equal("participantId", participantId),
+    ],
+  });
+
   let totalScore = 0;
 
-  for (const answer of allAnswers) {
-    if (answer.participantId !== participantId) {
-      continue;
-    }
-
+  for (const answer of response.rows) {
     myVotes[answer.questionId] = answer.value;
     const points = answer.points ?? 0;
     myPoints[answer.questionId] = points;

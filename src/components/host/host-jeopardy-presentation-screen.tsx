@@ -72,7 +72,7 @@ export function HostJeopardyPresentationScreen({
     }
 
     fetchBuzzes();
-    const interval = window.setInterval(fetchBuzzes, 500);
+    const interval = window.setInterval(fetchBuzzes, 1500);
 
     return () => {
       cancelled = true;

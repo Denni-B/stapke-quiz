@@ -2,14 +2,20 @@ import { Client, TablesDB } from "node-appwrite";
 
 import { appwriteConfig } from "./config";
 
-export function createServerClient() {
-  const client = new Client()
-    .setEndpoint(appwriteConfig.endpoint)
-    .setProject(appwriteConfig.projectId)
-    .setKey(appwriteConfig.apiKey);
+let cachedServerClient: { client: Client; tablesDB: TablesDB } | null = null;
 
-  return {
-    client,
-    tablesDB: new TablesDB(client),
-  };
+export function createServerClient() {
+  if (!cachedServerClient) {
+    const client = new Client()
+      .setEndpoint(appwriteConfig.endpoint)
+      .setProject(appwriteConfig.projectId)
+      .setKey(appwriteConfig.apiKey);
+
+    cachedServerClient = {
+      client,
+      tablesDB: new TablesDB(client),
+    };
+  }
+
+  return cachedServerClient;
 }

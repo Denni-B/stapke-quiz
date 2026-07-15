@@ -1,0 +1,14 @@
+name: Keep Render warm
+
+on:
+  schedule:
+    # Render free tier sleeps after ~15 min; ping every 14 min to stay awake.
+    - cron: "*/14 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render health endpoint
+        run: curl -fsS "https://stapke-quiz.onrender.com/api/health"

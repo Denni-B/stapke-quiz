@@ -96,29 +96,30 @@ async function getParticipantsForQuiz(quizId: string): Promise<Participant[]> {
   return response.rows;
 }
 
-async function getParticipantMap(
-  quizId: string,
-): Promise<Map<string, Participant>> {
-  const participants = await getParticipantsForQuiz(quizId);
-  return new Map(participants.map((participant) => [participant.$id, participant]));
-}
-
 function countEligibleBlackjackPlayers(participants: Participant[]): number {
   return participants.filter((participant) => !participant.groupId).length;
-}
-
-async function getEligibleBlackjackSeatCount(quizId: string): Promise<number> {
-  const participants = await getParticipantsForQuiz(quizId);
-  return countEligibleBlackjackPlayers(participants);
 }
 
 async function ensureBlackjackSession(
   quizId: string,
   chapterId: string,
+  options?: { participants?: Participant[] },
 ): Promise<BlackjackSession> {
   const { tablesDB } = createServerClient();
-  const seatCount = await getEligibleBlackjackSeatCount(quizId);
-  const existing = await getSessionByChapter(chapterId);
+
+  let participants = options?.participants;
+  let existing: BlackjackSession | null;
+
+  if (participants) {
+    existing = await getSessionByChapter(chapterId);
+  } else {
+    [participants, existing] = await Promise.all([
+      getParticipantsForQuiz(quizId),
+      getSessionByChapter(chapterId),
+    ]);
+  }
+
+  const seatCount = countEligibleBlackjackPlayers(participants);
 
   if (existing) {
     if (existing.phase === "seating" && existing.seatCount !== seatCount) {
@@ -1034,22 +1035,33 @@ export async function buildPlayerState(
   quizId: string,
   chapterId: string,
   participant: Participant,
+  options?: { totalScore?: number },
 ): Promise<BlackjackPlayerState | null> {
-  const session = await ensureBlackjackSession(quizId, chapterId);
+  const participants = await getParticipantsForQuiz(quizId);
+  const participantMap = new Map(
+    participants.map((entry) => [entry.$id, entry]),
+  );
 
-  const seats = await getSeats(chapterId);
-  const participantMap = await getParticipantMap(quizId);
-  const hands = await getHandsForRound(chapterId, session.roundNumber);
+  const session = await ensureBlackjackSession(quizId, chapterId, { participants });
+
+  const [seats, hands] = await Promise.all([
+    getSeats(chapterId),
+    getHandsForRound(chapterId, session.roundNumber),
+  ]);
+
   const mySeat = seats.find((seat) => seat.participantId === participant.$id);
   const myHands = hands
     .filter((hand) => hand.participantId === participant.$id)
     .sort((a, b) => a.handIndex - b.handIndex);
 
-  const answerState = await getParticipantAnswerState(quizId, participant.$id);
+  const totalScore =
+    options?.totalScore ??
+    (await getParticipantAnswerState(quizId, participant.$id)).totalScore;
+
   const committed = myHands
     .filter((hand) => hand.betConfirmed === 1)
     .reduce((sum, hand) => sum + hand.bet + hand.insuranceBet, 0);
-  const availableBalance = Math.max(0, answerState.totalScore - committed);
+  const availableBalance = Math.max(0, totalScore - committed);
 
   const dealerCards = parseDealerCards(session);
   const showAllDealer = session.phase === "dealer" || session.phase === "results";
@@ -1105,7 +1117,7 @@ export async function buildPlayerState(
     currentHandIndex: session.currentHandIndex,
     isMyTurn,
     availableBalance,
-    totalScore: answerState.totalScore,
+    totalScore,
     canAct: isMyTurn && allowedActions.length > 0,
     allowedActions,
     needsInsurance,
@@ -1124,11 +1136,17 @@ export async function buildHostState(
   quizId: string,
   chapterId: string,
 ): Promise<BlackjackHostState | null> {
-  const session = await ensureBlackjackSession(quizId, chapterId);
+  const participants = await getParticipantsForQuiz(quizId);
+  const participantMap = new Map(
+    participants.map((entry) => [entry.$id, entry]),
+  );
 
-  const seats = await getSeats(chapterId);
-  const participantMap = await getParticipantMap(quizId);
-  const hands = await getHandsForRound(chapterId, session.roundNumber);
+  const session = await ensureBlackjackSession(quizId, chapterId, { participants });
+
+  const [seats, hands] = await Promise.all([
+    getSeats(chapterId),
+    getHandsForRound(chapterId, session.roundNumber),
+  ]);
   const dealerCards = parseDealerCards(session);
   const showDealerHole = session.phase === "dealer" || session.phase === "results";
 
