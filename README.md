@@ -169,8 +169,8 @@ src/
 
 ### Live app
 
-- **Frontend (GitHub Pages):** https://denni-b.github.io/stapke/
-- **API backend (Render):** https://stapke.onrender.com
+- **Frontend (GitHub Pages):** https://denni-b.github.io/stapke-quiz/
+- **API backend (Render):** https://stapke-quiz.onrender.com
 
 GitHub Pages serves the static UI. API requests are proxied to Render via a service worker, because GitHub Pages cannot run Next.js API routes.
 

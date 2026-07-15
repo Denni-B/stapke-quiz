@@ -2,8 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 const apiOrigin =
-  process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://stapke.onrender.com";
-const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "/stapke";
+  process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://stapke-quiz.onrender.com";
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "/stapke-quiz";
 
 const sw = `const API_ORIGIN = "${apiOrigin}";
 const BASE_PATH = "${basePath}";

@@ -19,8 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GITHUB_PAGES: "true"
-      NEXT_PUBLIC_BASE_PATH: "/stapke"
-      NEXT_PUBLIC_API_ORIGIN: "https://stapke.onrender.com"
+      NEXT_PUBLIC_BASE_PATH: "/stapke-quiz"
+      NEXT_PUBLIC_API_ORIGIN: "https://stapke-quiz.onrender.com"
       NEXT_PUBLIC_APPWRITE_ENDPOINT: ${{ secrets.NEXT_PUBLIC_APPWRITE_ENDPOINT }}
       NEXT_PUBLIC_APPWRITE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_APPWRITE_PROJECT_ID }}
       NEXT_PUBLIC_APPWRITE_DATABASE_ID: ${{ secrets.NEXT_PUBLIC_APPWRITE_DATABASE_ID }}

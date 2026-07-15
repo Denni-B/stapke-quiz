@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const outDir = path.join(process.cwd(), "out");
-const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "/stapke";
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "/stapke-quiz";
 const segmentsToKeep = basePath.split("/").filter(Boolean).length;
 
 const spa404 = `<!DOCTYPE html>

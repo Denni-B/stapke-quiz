@@ -58,9 +58,9 @@ for (const [from, to] of moves) {
     env: {
       ...process.env,
       GITHUB_PAGES: "true",
-      NEXT_PUBLIC_BASE_PATH: process.env.NEXT_PUBLIC_BASE_PATH ?? "/stapke",
+      NEXT_PUBLIC_BASE_PATH: process.env.NEXT_PUBLIC_BASE_PATH ?? "/stapke-quiz",
       NEXT_PUBLIC_API_ORIGIN:
-        process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://stapke.onrender.com",
+        process.env.NEXT_PUBLIC_API_ORIGIN ?? "https://stapke-quiz.onrender.com",
     },
   });
   execSync("next build", {
@@ -71,7 +71,7 @@ for (const [from, to] of moves) {
     stdio: "inherit",
     env: {
       ...process.env,
-      NEXT_PUBLIC_BASE_PATH: process.env.NEXT_PUBLIC_BASE_PATH ?? "/stapke",
+      NEXT_PUBLIC_BASE_PATH: process.env.NEXT_PUBLIC_BASE_PATH ?? "/stapke-quiz",
     },
   });
 } finally {
