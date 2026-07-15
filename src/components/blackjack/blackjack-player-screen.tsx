@@ -147,34 +147,45 @@ export function BlackjackPlayerScreen({
       {blackjack.phase === "seating" ? (
         <Card>
           <h2 className="text-lg font-semibold">Kies je stoel</h2>
-          <p className="mt-1 text-sm text-muted">
-            Er zijn {blackjack.seatCount} stoelen. Kies een vrije positie.
-          </p>
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {Array.from({ length: blackjack.seatCount }, (_, index) => {
-              const seatNumber = index + 1;
-              const occupied = blackjack.occupiedSeats.find(
-                (seat) => seat.seatNumber === seatNumber,
-              );
-              const isMine = blackjack.mySeatNumber === seatNumber;
+          {blackjack.seatCount === 0 ? (
+            <p className="mt-2 text-sm text-amber-700">
+              Nog geen spelers beschikbaar voor blackjack. Wacht tot er deelnemers
+              zijn ingelogd (niet in een team).
+            </p>
+          ) : (
+            <>
+              <p className="mt-1 text-sm text-muted">
+                Er zijn {blackjack.seatCount} stoelen. Kies een vrije positie.
+              </p>
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {Array.from({ length: blackjack.seatCount }, (_, index) => {
+                  const seatNumber = index + 1;
+                  const occupied = blackjack.occupiedSeats.find(
+                    (seat) => seat.seatNumber === seatNumber,
+                  );
+                  const isMine = blackjack.mySeatNumber === seatNumber;
 
-              return (
-                <Button
-                  key={seatNumber}
-                  type="button"
-                  variant={isMine ? "primary" : "secondary"}
-                  disabled={loading || (occupiedSeatNumbers.has(seatNumber) && !isMine)}
-                  onClick={() => chooseSeat(seatNumber)}
-                  className="flex h-20 flex-col"
-                >
-                  <span className="text-lg font-bold">Stoel {seatNumber}</span>
-                  <span className="text-xs opacity-80">
-                    {occupied ? occupied.displayName : "Vrij"}
-                  </span>
-                </Button>
-              );
-            })}
-          </div>
+                  return (
+                    <Button
+                      key={seatNumber}
+                      type="button"
+                      variant={isMine ? "primary" : "secondary"}
+                      disabled={
+                        loading || (occupiedSeatNumbers.has(seatNumber) && !isMine)
+                      }
+                      onClick={() => chooseSeat(seatNumber)}
+                      className="flex h-20 flex-col"
+                    >
+                      <span className="text-lg font-bold">Stoel {seatNumber}</span>
+                      <span className="text-xs opacity-80">
+                        {occupied ? occupied.displayName : "Vrij"}
+                      </span>
+                    </Button>
+                  );
+                })}
+              </div>
+            </>
+          )}
           <p className="mt-4 text-sm text-muted">
             Wacht tot de host start wanneer iedereen een stoel heeft.
           </p>

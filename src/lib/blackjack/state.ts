@@ -54,10 +54,10 @@ async function getSeats(chapterId: string): Promise<BlackjackSeat[]> {
   const response = await tablesDB.listRows<BlackjackSeat>({
     databaseId: appwriteConfig.databaseId,
     tableId: appwriteConfig.blackjackSeatsTableId,
-    queries: [Query.equal("chapterId", chapterId), Query.orderAsc("seatNumber")],
+    queries: [Query.equal("chapterId", chapterId)],
   });
 
-  return response.rows;
+  return response.rows.sort((a, b) => a.seatNumber - b.seatNumber);
 }
 
 async function getHandsForRound(
@@ -72,12 +72,16 @@ async function getHandsForRound(
     queries: [
       Query.equal("chapterId", chapterId),
       Query.equal("roundNumber", roundNumber),
-      Query.orderAsc("seatNumber"),
-      Query.orderAsc("handIndex"),
     ],
   });
 
-  return response.rows;
+  return response.rows.sort((a, b) => {
+    if (a.seatNumber !== b.seatNumber) {
+      return a.seatNumber - b.seatNumber;
+    }
+
+    return a.handIndex - b.handIndex;
+  });
 }
 
 async function getParticipantsForQuiz(quizId: string): Promise<Participant[]> {
@@ -97,6 +101,56 @@ async function getParticipantMap(
 ): Promise<Map<string, Participant>> {
   const participants = await getParticipantsForQuiz(quizId);
   return new Map(participants.map((participant) => [participant.$id, participant]));
+}
+
+function countEligibleBlackjackPlayers(participants: Participant[]): number {
+  return participants.filter((participant) => !participant.groupId).length;
+}
+
+async function getEligibleBlackjackSeatCount(quizId: string): Promise<number> {
+  const participants = await getParticipantsForQuiz(quizId);
+  return countEligibleBlackjackPlayers(participants);
+}
+
+async function ensureBlackjackSession(
+  quizId: string,
+  chapterId: string,
+): Promise<BlackjackSession> {
+  const { tablesDB } = createServerClient();
+  const seatCount = await getEligibleBlackjackSeatCount(quizId);
+  const existing = await getSessionByChapter(chapterId);
+
+  if (existing) {
+    if (existing.phase === "seating" && existing.seatCount !== seatCount) {
+      return tablesDB.updateRow<BlackjackSession>({
+        databaseId: appwriteConfig.databaseId,
+        tableId: appwriteConfig.blackjackSessionsTableId,
+        rowId: existing.$id,
+        data: { seatCount },
+      });
+    }
+
+    return existing;
+  }
+
+  const deck = freshShuffledDeck();
+
+  return tablesDB.createRow<BlackjackSession>({
+    databaseId: appwriteConfig.databaseId,
+    tableId: appwriteConfig.blackjackSessionsTableId,
+    rowId: ID.unique(),
+    data: {
+      quizId,
+      chapterId,
+      phase: "seating",
+      roundNumber: 1,
+      seatCount,
+      deck: serializeCards(deck),
+      dealerCards: serializeCards([]),
+      currentSeat: 0,
+      currentHandIndex: 0,
+    },
+  });
 }
 
 export async function assertBlackjackChapterOpen(
@@ -122,34 +176,7 @@ export async function initBlackjackSession(
   quizId: string,
   chapterId: string,
 ): Promise<BlackjackSession> {
-  const { tablesDB } = createServerClient();
-  const participants = await getParticipantsForQuiz(quizId);
-  const seatCount = participants.length;
-
-  const existing = await getSessionByChapter(chapterId);
-
-  if (existing) {
-    return existing;
-  }
-
-  const deck = freshShuffledDeck();
-
-  return tablesDB.createRow<BlackjackSession>({
-    databaseId: appwriteConfig.databaseId,
-    tableId: appwriteConfig.blackjackSessionsTableId,
-    rowId: ID.unique(),
-    data: {
-      quizId,
-      chapterId,
-      phase: "seating",
-      roundNumber: 1,
-      seatCount,
-      deck: serializeCards(deck),
-      dealerCards: serializeCards([]),
-      currentSeat: 0,
-      currentHandIndex: 0,
-    },
-  });
+  return ensureBlackjackSession(quizId, chapterId);
 }
 
 export async function getBlackjackSession(chapterId: string): Promise<BlackjackSession | null> {
@@ -995,7 +1022,7 @@ export async function resetBlackjackGame(
   return updateSession(session.$id, {
     phase: "seating",
     roundNumber: 1,
-    seatCount: participants.length,
+    seatCount: countEligibleBlackjackPlayers(participants),
     deck: serializeCards(deck),
     dealerCards: serializeCards([]),
     currentSeat: 0,
@@ -1008,11 +1035,7 @@ export async function buildPlayerState(
   chapterId: string,
   participant: Participant,
 ): Promise<BlackjackPlayerState | null> {
-  let session = await getSessionByChapter(chapterId);
-
-  if (!session) {
-    session = await initBlackjackSession(quizId, chapterId);
-  }
+  const session = await ensureBlackjackSession(quizId, chapterId);
 
   const seats = await getSeats(chapterId);
   const participantMap = await getParticipantMap(quizId);
@@ -1101,11 +1124,7 @@ export async function buildHostState(
   quizId: string,
   chapterId: string,
 ): Promise<BlackjackHostState | null> {
-  let session = await getSessionByChapter(chapterId);
-
-  if (!session) {
-    session = await initBlackjackSession(quizId, chapterId);
-  }
+  const session = await ensureBlackjackSession(quizId, chapterId);
 
   const seats = await getSeats(chapterId);
   const participantMap = await getParticipantMap(quizId);

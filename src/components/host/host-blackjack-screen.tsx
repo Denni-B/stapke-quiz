@@ -161,22 +161,28 @@ export function HostBlackjackScreen({
         {state.phase === "seating" ? (
           <section className="mx-auto max-w-3xl">
             <h2 className="mb-4 text-center text-lg font-semibold">Stoelen</h2>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {Array.from({ length: state.seatCount }, (_, index) => {
-                const seatNumber = index + 1;
-                const seat = state.seats.find((item) => item.seatNumber === seatNumber);
+            {state.seatCount === 0 ? (
+              <p className="text-center text-white/70">
+                Nog geen spelers. Laat deelnemers joinen voordat je stoelen toewijst.
+              </p>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {Array.from({ length: state.seatCount }, (_, index) => {
+                  const seatNumber = index + 1;
+                  const seat = state.seats.find((item) => item.seatNumber === seatNumber);
 
-                return (
-                  <div
-                    key={seatNumber}
-                    className="rounded-xl border border-white/10 bg-white/5 p-4 text-center"
-                  >
-                    <p className="text-sm text-white/50">Stoel {seatNumber}</p>
-                    <p className="mt-1 font-medium">{seat?.displayName ?? "Vrij"}</p>
-                  </div>
-                );
-              })}
-            </div>
+                  return (
+                    <div
+                      key={seatNumber}
+                      className="rounded-xl border border-white/10 bg-white/5 p-4 text-center"
+                    >
+                      <p className="text-sm text-white/50">Stoel {seatNumber}</p>
+                      <p className="mt-1 font-medium">{seat?.displayName ?? "Vrij"}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
             <div className="mt-6 flex justify-center">
               <Button
                 type="button"

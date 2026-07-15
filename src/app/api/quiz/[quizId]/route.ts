@@ -160,7 +160,12 @@ export async function GET(
           const chapterId = await getOpenBlackjackChapterId(quizId);
 
           if (chapterId) {
-            blackjack = (await buildPlayerState(quizId, chapterId, participant)) ?? undefined;
+            try {
+              blackjack =
+                (await buildPlayerState(quizId, chapterId, participant)) ?? undefined;
+            } catch (blackjackError) {
+              console.error("Failed to build blackjack player state:", blackjackError);
+            }
           }
         }
       }

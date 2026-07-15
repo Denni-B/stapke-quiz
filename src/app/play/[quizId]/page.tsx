@@ -454,23 +454,29 @@ export default function PlayPage() {
   const activeQuestion = playState.activeQuestion;
 
   if (!activeQuestion) {
-    if (playState.blackjackChapterOpen && playState.status === "active" && playState.blackjack) {
-      return (
-        <>
-          {playState.isInGroup ? (
-            <div className="mx-auto max-w-lg p-4">
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-                Blackjack is individueel. Verlaat je team om mee te doen.
+    if (playState.blackjackChapterOpen && playState.status === "active") {
+      if (playState.blackjack) {
+        return (
+          <>
+            {playState.isInGroup ? (
+              <div className="mx-auto max-w-lg p-4">
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                  Blackjack is individueel. Verlaat je team om mee te doen.
+                </div>
               </div>
-            </div>
-          ) : (
-            <BlackjackPlayerScreen
-              sessionToken={session.sessionToken}
-              blackjack={playState.blackjack}
-              totalScore={playState.totalScore}
-            />
-          )}
-        </>
+            ) : (
+              <BlackjackPlayerScreen
+                sessionToken={session.sessionToken}
+                blackjack={playState.blackjack}
+                totalScore={playState.totalScore}
+              />
+            )}
+          </>
+        );
+      }
+
+      return (
+        <PlayerWaitingScreen message="Blackjack laden... wacht even of refresh de pagina." />
       );
     }
 
