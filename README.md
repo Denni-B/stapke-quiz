@@ -182,6 +182,8 @@ GitHub Pages serves the static UI. API requests are proxied to Render via a serv
 
 Pushes to `main` rebuild and deploy GitHub Pages automatically.
 
+> **Workflow push:** If the deploy workflow is not yet in the repo, run `gh auth refresh -h github.com -s workflow`, then push `.github/workflows/deploy.yml`. A copy lives at `scripts/github-pages-deploy.yml`.
+
 ## What's next
 
 This MVP covers auth, quiz CRUD, and guest join. Not yet implemented:
