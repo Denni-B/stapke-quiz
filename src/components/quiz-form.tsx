@@ -306,7 +306,10 @@ export function QuizForm({ mode, quizId, initialData }: QuizFormProps) {
 
     setQuestions((current) => [
       ...current,
-      createQuestionForChapter(effectiveSelectedChapterId, chapterType),
+      {
+        ...createQuestionForChapter(effectiveSelectedChapterId, chapterType),
+        chapterId: effectiveSelectedChapterId,
+      },
     ]);
   }
 
