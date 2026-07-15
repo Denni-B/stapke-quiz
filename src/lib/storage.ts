@@ -1,8 +1,7 @@
-import { ID, Permission, Role } from "appwrite";
-
-import { getCurrentUser } from "@/lib/auth";
-import { storage } from "@/lib/appwrite/client";
+import { apiUrl } from "@/lib/api-url";
+import { account } from "@/lib/appwrite/client";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { getCurrentUser } from "@/lib/auth";
 
 const ALLOWED_TYPES = new Set([
   "image/jpeg",
@@ -44,16 +43,23 @@ export async function uploadQuizImage(file: File): Promise<string> {
     throw new Error("You must be logged in to upload images.");
   }
 
-  const uploaded = await storage.createFile({
-    bucketId: appwriteConfig.imagesBucketId,
-    fileId: ID.unique(),
-    file,
-    permissions: [
-      Permission.read(Role.any()),
-      Permission.update(Role.user(user.$id)),
-      Permission.delete(Role.user(user.$id)),
-    ],
+  const { jwt } = await account.createJWT();
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(apiUrl("/api/upload-image"), {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${jwt}`,
+    },
+    body: formData,
   });
 
-  return uploaded.$id;
+  const data = (await response.json()) as { fileId?: string; error?: string };
+
+  if (!response.ok || !data.fileId) {
+    throw new Error(data.error ?? "Could not upload image.");
+  }
+
+  return data.fileId;
 }
