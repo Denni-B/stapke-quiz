@@ -21,7 +21,7 @@ export const appwriteConfig = {
   blackjackHandsTableId:
     process.env.NEXT_PUBLIC_APPWRITE_BLACKJACK_HANDS_TABLE_ID ?? "blackjack_hands",
   imagesBucketId:
-    process.env.NEXT_PUBLIC_APPWRITE_IMAGES_BUCKET_ID ?? "quiz-images",
+    process.env.NEXT_PUBLIC_APPWRITE_IMAGES_BUCKET_ID?.trim() || "quiz-images",
   apiKey: process.env.APPWRITE_API_KEY ?? "",
 };
 

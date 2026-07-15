@@ -1,4 +1,24 @@
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { Client, Permission, Role, Storage } from "node-appwrite";
+
+function loadEnvFile(filePath) {
+  if (!existsSync(filePath)) {
+    return;
+  }
+
+  for (const line of readFileSync(filePath, "utf8").split(/\r?\n/)) {
+    const match = line.match(/^\s*([^#=]+)=(.*)$/);
+    if (!match || process.env[match[1]]) {
+      continue;
+    }
+
+    process.env[match[1]] = match[2].replace(/^["']|["']$/g, "");
+  }
+}
+
+loadEnvFile(resolve(process.cwd(), ".env.local"));
 
 const endpoint =
   process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT ??

@@ -113,6 +113,23 @@ creatorId = {{$userId}}
 - Do **not** grant create/read/update/delete to `Users` or `Any`
 - Guest joins go through the Next.js `/api/join` route using the server API key
 
+#### Create image storage bucket
+
+Question images are stored in Appwrite Storage. Create the bucket automatically:
+
+```bash
+# Requires APPWRITE_API_KEY in .env.local
+npm run setup:storage
+```
+
+This creates bucket `quiz-images` with the right permissions. Set in `.env.local`:
+
+```env
+NEXT_PUBLIC_APPWRITE_IMAGES_BUCKET_ID=quiz-images
+```
+
+Restart the dev server after changing env vars.
+
 #### Create API key
 
 1. Go to **Overview** → **API Keys** → **Create API key**
@@ -163,7 +180,8 @@ src/
 | `npm run dev`  | Start dev server     |
 | `npm run build`| Production build     |
 | `npm run start`| Start production app |
-| `npm run lint` | Run ESLint           |
+| `npm run setup:tables` | Create Appwrite tables |
+| `npm run setup:storage` | Create Appwrite image bucket |
 
 ## Deployment
 

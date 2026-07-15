@@ -268,14 +268,24 @@ export async function setActiveQuestionForHost(
     throw new Error("Open the chapter before presenting this question.");
   }
 
+  const data: {
+    activeQuestionId: string;
+    activeQuestionStartedAt?: number;
+  } = {
+    activeQuestionId: questionId,
+  };
+
+  // Keep the original start time when the host re-opens the same live question
+  // (e.g. Previous/Next or "Continue presenting") so points keep counting down.
+  if (quiz.activeQuestionId !== questionId || !quiz.activeQuestionStartedAt) {
+    data.activeQuestionStartedAt = Date.now();
+  }
+
   return tablesDB.updateRow<Quiz>({
     databaseId: appwriteConfig.databaseId,
     tableId: appwriteConfig.quizzesTableId,
     rowId: quizId,
-    data: {
-      activeQuestionId: questionId,
-      activeQuestionStartedAt: Date.now(),
-    },
+    data,
   });
 }
 

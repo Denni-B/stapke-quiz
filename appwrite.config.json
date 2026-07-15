@@ -154,5 +154,21 @@
         }
       ]
     }
+  ],
+  "buckets": [
+    {
+      "$id": "quiz-images",
+      "name": "Quiz Images",
+      "enabled": true,
+      "fileSecurity": false,
+      "$permissions": [
+        "create(\"users\")",
+        "read(\"any\")",
+        "update(\"users\")",
+        "delete(\"users\")"
+      ],
+      "maximumFileSize": 5242880,
+      "allowedFileExtensions": ["jpg", "jpeg", "png", "webp", "gif"]
+    }
   ]
 }
