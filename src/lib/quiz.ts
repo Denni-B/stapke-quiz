@@ -275,8 +275,8 @@ export async function setActiveQuestionForHost(
     activeQuestionId: questionId,
   };
 
-  // Keep the original start time when the host re-opens the same live question
-  // (e.g. Previous/Next or "Continue presenting") so points keep counting down.
+  // Client-side fallback only — host UI should use the /api/host/[quizId]/present route
+  // so the timer uses the same server clock as vote scoring.
   if (quiz.activeQuestionId !== questionId || !quiz.activeQuestionStartedAt) {
     data.activeQuestionStartedAt = Date.now();
   }
@@ -372,28 +372,11 @@ export async function startChapterForHost(
     });
   }
 
-  const questionsResponse = await tablesDB.listRows<Question>({
+  return tablesDB.getRow<Quiz>({
     databaseId: appwriteConfig.databaseId,
-    tableId: appwriteConfig.questionsTableId,
-    queries: [
-      Query.equal("quizId", quizId),
-      Query.equal("chapterId", chapterId),
-      Query.orderAsc("order"),
-      Query.limit(1),
-    ],
+    tableId: appwriteConfig.quizzesTableId,
+    rowId: quizId,
   });
-
-  const firstQuestion = questionsResponse.rows[0];
-
-  if (!firstQuestion) {
-    return tablesDB.getRow<Quiz>({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.quizzesTableId,
-      rowId: quizId,
-    });
-  }
-
-  return setActiveQuestionForHost(quizId, userId, firstQuestion.$id);
 }
 
 async function isCodeTaken(code: string): Promise<boolean> {

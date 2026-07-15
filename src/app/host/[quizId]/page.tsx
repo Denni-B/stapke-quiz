@@ -17,6 +17,7 @@ import { Button, Card } from "@/components/ui";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { apiUrl } from "@/lib/api-url";
 import { getCurrentUser } from "@/lib/auth";
+import { presentQuestionForHost } from "@/lib/host-present";
 import {
   endQuizForHost,
   getQuizHostData,
@@ -470,7 +471,7 @@ export default function HostQuizPage() {
       } else if (isJeopardyChapter(chapter, chapterQuestions)) {
         setHostScreen("jeopardyBoard");
       } else {
-        setHostScreen("present");
+        await presentQuestion(chapter.$id, 0, "present");
       }
     } catch (startError) {
       const message =
@@ -522,7 +523,9 @@ export default function HostQuizPage() {
       questionIndex = presentingQuestionIndex;
     }
 
-    void presentQuestion(chapter.$id, questionIndex, "present");
+    void presentQuestion(chapter.$id, questionIndex, "present", {
+      preserveTimer: quiz?.activeQuestionId === chapterQuestions[questionIndex]?.$id,
+    });
   }
 
   async function presentJeopardyQuestion(question: ParsedQuestion) {
@@ -545,7 +548,7 @@ export default function HostQuizPage() {
         throw new Error("You must be logged in to host a quiz.");
       }
 
-      const updated = await setActiveQuestionForHost(quizId, user.$id, question.$id);
+      const updated = await presentQuestionForHost(quizId, user.$id, question.$id);
       setQuiz(updated);
     } catch (presentError) {
       const message =
@@ -656,6 +659,7 @@ export default function HostQuizPage() {
     chapterId: string,
     questionIndex: number,
     screen: HostScreen = "present",
+    options?: { preserveTimer?: boolean },
   ) {
     const chapterQuestions = questions
       .filter((question) => question.chapterId === chapterId)
@@ -680,7 +684,9 @@ export default function HostQuizPage() {
         throw new Error("You must be logged in to host a quiz.");
       }
 
-      const updated = await setActiveQuestionForHost(quizId, user.$id, question.$id);
+      const updated = await presentQuestionForHost(quizId, user.$id, question.$id, {
+        preserveTimer: options?.preserveTimer ?? false,
+      });
       setQuiz(updated);
     } catch (presentError) {
       const message =

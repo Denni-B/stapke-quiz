@@ -1,9 +1,9 @@
-export const MC_MAX_POINTS = 1000;
-/** Seconds of full points while players receive the question (poll + Render latency). */
-export const MC_GRACE_PERIOD_MS = 6_000;
+export const MC_MAX_POINTS = 2000;
+/** Full points while players receive the question (2s poll + Render/GitHub Pages latency). */
+export const MC_GRACE_PERIOD_MS = 8_000;
 /** Decay window after the grace period before points reach the minimum. */
-export const MC_TIME_LIMIT_MS = 30_000;
-export const MC_MIN_CORRECT_POINTS = 100;
+export const MC_TIME_LIMIT_MS = 20_000;
+export const MC_MIN_CORRECT_POINTS = 200;
 
 export function calculateMultipleChoicePoints(
   isCorrect: boolean,
