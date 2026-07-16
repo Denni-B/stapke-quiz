@@ -18,6 +18,7 @@ import { useRequireAuth } from "@/hooks/use-require-auth";
 import { apiUrl } from "@/lib/api-url";
 import { getCurrentUser } from "@/lib/auth";
 import { presentQuestionForHost } from "@/lib/host-present";
+import { getImagePreviewUrl } from "@/lib/storage";
 import {
   endQuizForHost,
   getQuizHostData,
@@ -51,6 +52,18 @@ type HostScreen =
   | "jeopardyBoard"
   | "jeopardyPresent"
   | "blackjack";
+
+function warmImageUrl(url: string): Promise<void> {
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.decoding = "async";
+    image.loading = "eager";
+    image.fetchPriority = "low";
+    image.onload = () => resolve();
+    image.onerror = () => resolve();
+    image.src = url;
+  });
+}
 
 function getStatusDescription(status: QuizStatus | undefined) {
   switch (status) {
@@ -862,6 +875,39 @@ export default function HostQuizPage() {
 
     return getChapterQuestions(questions, presentingChapter.$id);
   }, [presentingChapter, questions]);
+
+  useEffect(() => {
+    if (
+      quiz?.status !== "active" ||
+      !["present", "results", "rankingSummary", "jeopardyPresent"].includes(hostScreen) ||
+      presentingQuestions.length === 0
+    ) {
+      return;
+    }
+
+    const startIndex = Math.max(0, presentingQuestionIndex);
+    const endIndex = Math.min(presentingQuestions.length, startIndex + 3);
+    const questionsToWarm = presentingQuestions.slice(startIndex, endIndex);
+
+    const urls = new Set<string>();
+
+    for (const item of questionsToWarm) {
+      if (item.imageFileId) {
+        urls.add(getImagePreviewUrl(item.imageFileId, 1920, 1080));
+        urls.add(getImagePreviewUrl(item.imageFileId, 640, 480));
+      }
+
+      if (item.type === "multipleChoice") {
+        for (const option of item.options) {
+          if (option.imageFileId) {
+            urls.add(getImagePreviewUrl(option.imageFileId, 480, 320));
+          }
+        }
+      }
+    }
+
+    void Promise.all(Array.from(urls, (url) => warmImageUrl(url)));
+  }, [hostScreen, presentingQuestionIndex, presentingQuestions, quiz?.status]);
 
   const presentingChapterIsRanking = isRankingChapter(
     presentingChapter,
