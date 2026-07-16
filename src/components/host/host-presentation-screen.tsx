@@ -31,9 +31,6 @@ function ScaleVisualization({ min, max }: { min: number; max: number }) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col items-center justify-center p-4 sm:p-6">
-      <p className="mb-6 text-center text-xl text-white/70 sm:text-2xl lg:text-3xl">
-        Spelers beoordelen van {min} tot {max}
-      </p>
       <div className="flex w-full max-w-2xl flex-wrap items-center justify-center gap-2 sm:gap-3">
         {values.map((value) => (
           <div
@@ -172,7 +169,6 @@ export function HostPresentationScreen({
   }, [question.$id, quizId, userId]);
 
   const hasImage = Boolean(question.imageFileId);
-  const itemLabel = isRankingChapter ? "Item" : "Vraag";
   const isLastItem = questionIndex >= questionCount - 1;
   const nextDisabled = saving || (isLastItem && !isRankingChapter);
   const isMultipleChoice = question.type === "multipleChoice";
@@ -206,10 +202,8 @@ export function HostPresentationScreen({
   return (
     <HostScreenShell
       breadcrumb={`${quiz.title} · ${chapter.title}`}
-      badge="Live voor spelers"
       currentIndex={questionIndex}
       totalCount={questionCount}
-      itemLabel={itemLabel}
       responseStatus={responseStatus ?? undefined}
       onExit={onExit}
       footer={footer}
@@ -217,22 +211,19 @@ export function HostPresentationScreen({
       {isMultipleChoice ? (
         <MultipleChoiceLayout question={question} hasImage={hasImage} />
       ) : isRankingChapter && hasImage ? (
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-b border-white/10 p-3 sm:p-4 lg:border-b-0 lg:border-r">
-            {question.text ? (
-              <div className="shrink-0 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
-                <p className="text-center text-lg font-semibold leading-snug sm:text-2xl lg:text-3xl">
-                  {question.text}
-                </p>
-              </div>
-            ) : null}
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-3 sm:p-4">
+          {question.text ? (
+            <div className="shrink-0 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+              <p className="text-center text-lg font-semibold leading-snug sm:text-2xl lg:text-3xl">
+                {question.text}
+              </p>
+            </div>
+          ) : null}
+          <div className="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] sm:mt-4">
             <HostQuestionImage
               fileId={question.imageFileId!}
               alt={question.text || "Item"}
             />
-          </div>
-          <div className="flex min-h-0 w-full shrink-0 flex-col lg:w-[42%] xl:w-[38%]">
-            <ScaleVisualization min={scaleMin} max={scaleMax} />
           </div>
         </div>
       ) : (

@@ -14,13 +14,21 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024;
 export function getImagePreviewUrl(
   fileId: string,
   width = 960,
-  height = 540,
+  height?: number,
 ): string {
   const params = new URLSearchParams({
     project: appwriteConfig.projectId,
-    width: String(width),
-    height: String(height),
   });
+
+  // Appwrite crops when both width and height are set. Only pass both for square
+  // thumbnails; otherwise use a single dimension to preserve aspect ratio.
+  if (height !== undefined && width === height) {
+    params.set("width", String(width));
+    params.set("height", String(height));
+  } else {
+    const maxDim = height !== undefined ? Math.max(width, height) : width;
+    params.set("width", String(maxDim));
+  }
 
   return `${appwriteConfig.endpoint}/storage/buckets/${appwriteConfig.imagesBucketId}/files/${fileId}/preview?${params.toString()}`;
 }

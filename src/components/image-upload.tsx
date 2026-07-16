@@ -66,10 +66,12 @@ export function ImageUpload({
               src={getImagePreviewUrl(
                 fileId,
                 aspect === "question" ? 960 : 256,
-                aspect === "question" ? 540 : 256,
+                aspect === "option" ? 256 : undefined,
               )}
               alt="Uploaded preview"
-              className="h-full w-full object-cover"
+              className={`h-full w-full ${
+                aspect === "question" ? "object-contain" : "object-cover"
+              }`}
             />
           </div>
           <div className="flex gap-2">

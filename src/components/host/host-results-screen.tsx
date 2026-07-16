@@ -57,7 +57,6 @@ export function HostResultsScreen({
       title={question.text || undefined}
       currentIndex={questionIndex}
       totalCount={questionCount}
-      itemLabel="Vraag"
       onExit={onExit}
       footer={footer}
     >
@@ -90,14 +89,7 @@ export function HostResultsScreen({
                   />
                 ))}
               </div>
-            ) : (
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
-                <p className="text-lg text-white/70 sm:text-xl">
-                  Spelers beoordelen van {question.scaleMin ?? 1} tot{" "}
-                  {question.scaleMax ?? 10}
-                </p>
-              </div>
-            )}
+            ) : null}
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-white p-4 text-foreground shadow-xl">
